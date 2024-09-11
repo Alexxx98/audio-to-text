@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 import assemblyai as aai
+from tkinter import filedialog
 
 
 load_dotenv()
@@ -31,3 +32,12 @@ def generate_text(label) -> None:
     else:
         with open(os.path.join(OUTPUT_DIR, file_name), 'w') as file:
             file.write(transcript.text)
+
+
+# Get the audio file
+def get_file_path(label):
+    file_path = filedialog.askopenfilename(title="Select a file", filetypes=[
+        ('Audio Files', '*.mp3 *.wav *.m4a')
+    ])
+
+    label.config(text=file_path)

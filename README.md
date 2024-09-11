@@ -1,0 +1,1 @@
+<a href="https://iconscout.com/icons/speech-to-text" class="text-underline font-size-sm" target="_blank">Speech To Text</a> by <a href="https://iconscout.com/contributors/any-icon" class="text-underline font-size-sm">Any Icon</a> on <a href="https://iconscout.com" class="text-underline font-size-sm">IconScout</a>

@@ -1,0 +1,5 @@
+.env
+audio_to_text_env
+
+__pycache__
+*.pyc

@@ -1,5 +1,6 @@
 .env
-audio_to_text_env
+stt_env
+ffmpeg
 
 __pycache__
 *.pyc

@@ -1,14 +1,21 @@
 import os
+import io
 import threading
 import tkinter as tk
-from tkinter import filedialog
-from dotenv import load_dotenv
 import assemblyai as aai
+
+from tkinter import filedialog
+from pydub import AudioSegment
+from dotenv import load_dotenv
 
 
 load_dotenv()
 
 API_KEY = os.getenv('ASSEMBLY_API_KEY')
+FFMPEG = os.path.join(os.getcwd(), 'ffmpeg', 'ffmpeg.exe')
+
+AudioSegment.converter = FFMPEG
+
 aai.settings.api_key = API_KEY
 
 class Converter:
@@ -19,9 +26,10 @@ class Converter:
         os.listdir(output_dir)
     except FileNotFoundError:
         os.mkdir(output_dir)
+        
 
     def __init__(self, root):
-        self.file_path = ''
+        self.input_file = ''
 
         # Set few options
         self.label_font = ('Arial', 14, 'bold')
@@ -63,31 +71,65 @@ class Converter:
         self.progress_label = tk.Label(text='')
         self.progress_label.pack(pady=20)
 
+
     def get_file_path(self):
-        self.file_path = filedialog.askopenfilename(
+        self.input_file = filedialog.askopenfilename(
             title="Select a file",
             filetypes=[('Audio Files', '*.mp3 *.wav *.m4a')]
         )
-        self.file_path_label.config(text=self.file_path)
+        self.progress_label.config(text='')
+        self.file_path_label.config(text=self.input_file)
 
 
     def convert_to_text(self):
-        if self.file_path:
-            file_name = self.file_path.split('/')[-1].split('.')[0] + '.txt'
+        try:
+            if self.input_file:
+                output_file = self.input_file.split('/')[-1].split('.')[0] + '.odt'
+                output_file= os.path.join(self.output_dir, output_file)
 
-            self.progress_label.config(text='Converting in progres...')
+                config = aai.TranscriptionConfig(language_code='pl')
+                transcriber = aai.Transcriber(config=config)
 
-            config = aai.TranscriptionConfig(language_code='pl')
-            transcriber = aai.Transcriber(config=config)
-            transcript = transcriber.transcribe(self.file_path)
+                # If input file has not mp3 extension, convert it
+                if self.input_file.split('\\')[-1].split('.')[1] != 'mp3':
+                    self.progress_label.config(text='Converting to mp3...')
 
-            if transcript.status == aai.TranscriptStatus.error:
-                print(transcript.error)
-            else:
-                with open(os.path.join(self.output_dir, file_name), 'w') as file:
+                    with open(self.input_file, 'rb') as file:
+                        audio_bytes = file.read()
+
+                    format =self.input_file.split('\\')[-1].split('.')[1]
+                    audio = AudioSegment.from_file(io.BytesIO(audio_bytes), format=format)
+                    audio_buffer = io.BytesIO()
+                    audio.export(audio_buffer, format="mp3", bitrate="192k")
+
+                    # Move the cursor of the buffer to the beginning so it can be read
+                    audio_buffer.seek(0)
+                    
+                    # Transcribe from a binary data
+                    self.progress_label.config(text='Transcribing...')
+                    transcript = transcriber.transcribe(audio_buffer)
+                else:
+                    # Transcribe from a file
+                    self.progress_label.config(text='Transcribing...')
+                    transcript = transcriber.transcribe(self.input_file)
+
+                if transcript.status == aai.TranscriptStatus.error:
+                    self.progress_label.config(
+                        text=f'Error: {transcript.error}',
+                        foreground='red'
+                    )
+                    return
+
+                with open(output_file, 'w') as file:
                     file.write(transcript.text)
-
-            self.progress_label.config(text='')
+                    self.progress_label.config(
+                        text='Transcription has been successfully done',
+                        foreground='green'
+                    )
+                
+                os.startfile(output_file)
+        except Exception as e:
+            self.progress_label.config(f'Error: {e}', foreground='red')
 
     
     def start_process(self):
